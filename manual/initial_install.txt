@@ -1,0 +1,167 @@
+# manual
+# https://qiita.com/taskooh/items/f67d34f9f5c8eab08dc0
+
+
+Github
+user: uotian+srw@gmail.com
+pass: search-rank-watcher202001
+
+Heroku
+user: uotian+srw@gmail.com
+pass: search-rank-watcher202001
+
+#############
+#  アプリ雛形作成
+#############
+
+mkdir react-rails-heroku && cd react-rails-heroku
+mkdir projects && cd projects
+npx create-react-app react-frontend
+bundle init
+vi Gemfile
+# `gem "rails"` のコメントアウトを外す
+bundle install --path vendor/bundle
+bundle exec rails new rails-backend --database=postgresql --skip-bundle --api
+
+#############
+#  バックエンド
+#############
+cd rails-backend/
+vi Gemfile
+# フロントエンドからのアクセスを許可する為に `gem 'rack-cors'` のコメントアウトを外す
+bundle install --path vendor/bundle
+bundle exec rails db:create
+ 
+vi config/routes.rb
+# Rails.application.routes.draw do
+#    get "hello_world", to: 'application#hello_world'
+# end
+
+vi app/controllers/application_controller.rb
+# class ApplicationController < ActionController::API
+#   def hello_world
+#     render json: { text: "Hello World" }
+#   end
+# end
+
+vi config/initializers/cors.rb
+
+Rails.application.config.middleware.insert_before 0, Rack::Cors do
+  allow do
+    origins /localhost\:\d+/
+
+    resource '*',
+      headers: :any,
+      methods: [:get, :post, :put, :patch, :delete, :options, :head]
+  end
+end
+
+#############
+#  フロントエンド
+#############
+cd ../react-frontend
+
+npm i
+
+vi .env
+# REACT_APP_SERVER_URL=http://localhost:5000
+
+vi src/App.js
+# manual参考
+
+
+#############
+#  つなぎこみ(1)
+#############
+cd ../..
+
+npm init
+
+vi package.json
+
+bundle init
+vi Gemfile
+# manual参考
+
+bundle install --path vendor/bundle
+
+vi Procfile
+# backend: exec /usr/bin/env sh -c 'cd projects/rails-backend && npm start'
+# frontend: exec /usr/bin/env PORT=3000 sh -c 'cd projects/react-frontend && npm start'
+
+
+vi Procfile.dev
+# web: exec /usr/bin/env PORT=5000 sh -c 'bundle exec rails s'
+
+vi .foreman
+# procfile: Procfile.dev
+
+#############
+#  つなぎこみ(backend)
+#############
+cd projects/rails-backend
+
+npm init
+
+vi package.json
+# “scripts": {
+#   "start": "bundle exec foreman start"
+# }
+
+vi Gemfile
+# gem "foreman"
+
+bundle install --path vendor/bundle
+
+
+#############
+# Heroku(backend)
+#############
+heroku login
+
+cd ../rails-backend
+
+git init
+git config --local user.name uotian+srw
+git config --local user.email uotian+srw@gmail.com
+echo "/vendor/bundle" >> .gitignore
+echo ".foreman" >> .gitignore
+git add --all
+git commit -m "initial commit"
+heroku create srw-rails-backend
+git push heroku master
+
+cd ../react-frontend
+
+#############
+# Heroku(frontend)
+#############
+cd ../react-frontend
+
+git init
+git config --local user.name uotian+srw
+git config --local user.email uotian+srw@gmail.com
+git add --all
+git commit -m "initial commit"
+heroku create srw-react-frontend --buildpack mars/create-react-app
+git push heroku master
+
+#############
+# Heroku(prod setting)
+#############
+cd ../react-frontend
+
+vi .env.production
+# REACT_APP_SERVER_URL=https://srw-rails-backend.herokuapp.com/
+
+git add .env.production
+git commit -m "add .env.production"
+git push heroku master
+
+
+cd ../rails-backend
+vi config/initializers/cors.rb
+# origins /localhost\:\d+/, /srw-react-frontend\.herokuapp\.com/
+
+git add config/initializers/cors.rb
+
